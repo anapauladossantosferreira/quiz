@@ -1,1 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mega Quiz de Conhecimentos</title>
+  <style>
+    /* Reset e Configurações Básicas */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
 
+    /* Fundo Animado Bem Legal */
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      padding: 20px;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Container do Quiz (Efeito Glassmorphism) */
+    .quiz-container {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      padding: 30px;
+      width: 100%;
+      max-width: 600px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      color: #fff;
+    }
+
+    .quiz-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .quiz-header h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .progress {
+      font-size: 0.9rem;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    .question-title {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* Botões das Alternativas */
+    .answers-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn-answer {
+      background: rgba(255, 255, 255, 0.85);
+      color: #333;
+      border: none;
+      padding: 15px 20px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: left;
+    }
+
+    .btn-answer:hover:not([disabled]) {
+      background: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    /* Estilos de Validação (Certo/Errado) */
+    .btn-answer.correct {
+      background-color: #2ecc71 !important;
+      color: white;
+    }
+
+    .btn-answer.incorrect {
+      background-color: #e74c3c !important;
+      color: white;
+    }
+
+    .btn-answer:disabled {
+      cursor: not-allowed;
+    }
+
+    /* Botão de Próxima Pergunta / Reiniciar */
+    .controls {
+      margin-top: 25px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .btn-next {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      display: none;
+      transition: background 0.3s;
+    }
+
+    .btn-next:hover {
+      background-color: #2980b9;
+    }
+
+    /* Tela Final de Pontuação */
+    .score-container {
+      text-align: center;
+      display: none;
+    }
+
+    .score-container h2 {
+      font-size: 2rem;
+      margin-bottom: 15px;
+    }
+
+    .score-container p {
+      font-size: 1.2rem;
+      margin-bottom: 25px;
+    }
+
+    .btn-restart {
+      background-color: #2ecc71;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .btn-restart:hover {
+      background-color: #27ae60;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="quiz-container">
+    <!-- Tela de Perguntas -->
+    <div id="quiz-screen">
+      <div class="quiz-header">
+        <h1>Mega Quiz</h1>
+        <div class="progress" id="progress">Pergunta 1 de 6</div>
+      </div>
+
+      <div class="question-title" id="question">Carregando pergunta...</div>
+
+      <div class="answers-container" id="answers-container">
+        <!-- As alternativas serão geradas dinamicamente via JS -->
+      </div>
+
+      <div class="controls">
+        <button id="btn-next" class="btn-next">Próxima Pergunta ➔</button>
+      </div>
+    </div>
+
+    <!-- Tela de Resultado Final -->
+    <div id="score-screen" class="score-container">
+      <h2>Parabéns! Você concluiu!</h2>
+      <p id="score-text">Você acertou 0 de 0 perguntas.</p>
+      <button class="btn-restart" onclick="restartQuiz()">Jogar Novamente</button>
+    </div>
+  </div>
+
+  <script>
+    // Lista de Perguntas (Cada uma com 1 correta e 3 incorretas)
+    const questions = [
+      {
+        question: "Qual é a capital da França?",
+        answers: [
+          { text: "Londres", correct: false },
+          { text: "Paris", correct: true },
+          { text: "Madri", correct: false },
+          { text: "Roma", correct: false }
+        ]
+      },
+      {
+        question: "Quanto é 7 x 8?",
+        answers: [
+          { text: "54", correct: false },
+          { text: "64", correct: false },
+          { text: "56", correct: true },
+          { text: "48", correct: false }
+        ]
+      },
+      {
+        question: "Qual é o maior país do mundo em área territorial?",
+        answers: [
+          { text: "Rússia", correct: true },
+          { text: "Canadá", correct: false },
+          { text: "China", correct: false },
+          { text: "Estados Unidos", correct: false }
+        ]
+      },
+      {
+        question: "Quanto é a raiz quadrada de 144?",
+        answers: [
+          { text: "10", correct: false },
+          { text: "14", correct: false },
+          { text: "12", correct: true },
+          { text: "16", correct: false }
+        ]
+      },
+      {
+        question: "Qual destes países fica no continente africano?",
+        answers: [
+          { text: "México", correct: false },
+          { text: "Tailândia", correct: false },
+          { text: "Nigéria", correct: true },
+          { text: "Uruguai", correct: false }
+        ]
+      },
+      {
+        question: "Se um triângulo tem lados de 3cm, 4cm e 5cm, qual é o seu perímetro?",
+        answers: [
+          { text: "12 cm", correct: true },
+          { text: "15 cm", correct: false },
+          { text: "20 cm", correct: false },
+          { text: "9 cm", correct: false }
+        ]
+      }
+    ];
+
+    // Variáveis de Controle
+    let currentQuestionIndex = 0;
+    let score = 0;
+
+    // Elementos do DOM
+    const questionElement = document.getElementById('question');
+    const answersContainer = document.getElementById('answers-container');
+    const nextButton = document.getElementById('btn-next');
+    const progressElement = document.getElementById('progress');
+    const quizScreen = document.getElementById('quiz-screen');
+    const scoreScreen = document.getElementById('score-screen');
+    const scoreText = document.getElementById('score-text');
+
+    // Iniciar o Quiz
+    function startQuiz() {
+      currentQuestionIndex = 0;
+      score = 0;
+      quizScreen.style.display = 'block';
+      scoreScreen.style.display = 'none';
+      nextButton.style.display = 'none';
+      showQuestion();
+    }
+
+    // Exibir a Pergunta Atual
+    function showQuestion() {
+      resetState();
+      let currentQuestion = questions[currentQuestionIndex];
+      questionElement.innerText = currentQuestion.question;
+      progressElement.innerText = `Pergunta ${currentQuestionIndex + 1} de ${questions.length}`;
+
+      currentQuestion.answers.forEach(answer => {
+        const button = document.createElement('button');
+        button.innerText = answer.text;
+        button.classList.add('btn-answer');
+        if (answer.correct) {
+          button.dataset.correct = answer.correct;
+        }
+        button.addEventListener('click', selectAnswer);
+        answersContainer.appendChild(button);
+      });
+    }
+
+    // Limpar estado da tela entre perguntas
+    function resetState() {
+      nextButton.style.display = 'none';
+      while (answersContainer.firstChild) {
+        answersContainer.removeChild(answersContainer.firstChild);
+      }
+    }
+
+    // Lógica quando o jogador escolhe uma alternativa
+    function selectAnswer(e) {
+      const selectedButton = e.target;
+      const isCorrect = selectedButton.dataset.correct === "true";
+
+      if (isCorrect) {
+        score++;
+      }
+
+      // Percorre todos os botões para aplicar as cores e revelar a resposta correta
+      Array.from(answersContainer.children).forEach(button => {
+        if (button.dataset.correct === "true") {
+          // Destaca a resposta CORRETA de verde em todos os casos
+          button.classList.add('correct');
+        } else {
+          // Desativa/Apaga visualmente as erradas
+          button.style.opacity = "0.6";
+        }
+
+        // Se o usuário clicou na opção errada, marca essa específica de vermelho
+        if (button === selectedButton && !isCorrect) {
+          button.classList.add('incorrect');
+          button.style.opacity = "1"; // mantém visível para destacar o erro
+        }
+
+        // Desabilita os botões para não clicar mais de uma vez
+        button.disabled = true;
+      });
+
+      // Exibe o botão de "Próxima Pergunta"
+      nextButton.style.display = 'block';
+    }
+
+    // Botão Próximo
+    nextButton.addEventListener('click', () => {
+      currentQuestionIndex++;
+      if (currentQuestionIndex < questions.length) {
+        showQuestion();
+      } else {
+        showScore();
+      }
+    });
+
+    // Exibir Tela Final
+    function showScore() {
+      quizScreen.style.display = 'none';
+      scoreScreen.style.display = 'block';
+      scoreText.innerText = `Você acertou ${score} de ${questions.length} perguntas!`;
+    }
+
+    // Reiniciar
+    function restartQuiz() {
+      startQuiz();
+    }
+
+    // Iniciar na primeira carga da página
+    startQuiz();
+  </script>
+</body>
+</html>
